@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "audio-stream"
+version = "0.1.0"
+description = ""
+authors = ["Vlad <89295404+Virashu@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+PyAudio = "^0.2.13"
+soundcard = "^0.4.2"
+shutup = "^0.2.0"
+matplotlib = "^3.8.0"
+pyserial = "^3.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
