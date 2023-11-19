@@ -3,10 +3,15 @@ import pyaudio as pa
 
 import struct
 
-__all__ = ["Audio", "smooth_ver", "smooth_hor"]
+__name__ = "AudioVisualizer_Audio"
+__all__ = ["Audio", "smooth_ver", "smooth_hor", "fade_np", "fade", "smooth", "bounds"]
 
 
 class Audio:
+    @staticmethod
+    def select() -> str:
+        ...
+
     def __init__(self, buffer_size: int = 60) -> None:
         self._chunk = 1024
         self._format = pa.paInt16
@@ -71,5 +76,18 @@ def fade(l: list[int | float]) -> list[int | float]:
     return [l[i] - i for i in range(len(l))]
 
 
+def fade_np(l: np.ndarray, amount: float = 1) -> np.ndarray:
+    a = l - (np.arange(len(l)) * amount)
+    a[a < 0] = 0
+
+    return a
+
+
 def bounds(l: list[int | float]) -> list[int | float]:
     return [min(max(i, 0), 255) for i in l]
+
+
+def smooth(y, box_pts):
+    box = np.ones(box_pts) / box_pts
+    y_smooth = np.convolve(y, box, mode="same")
+    return y_smooth

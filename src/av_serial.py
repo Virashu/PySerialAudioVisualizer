@@ -1,10 +1,11 @@
 import serial
 import serial.tools.list_ports
 
+__name__ = "AudioVisualizer_Serial"
 __all__ = ["Serial"]
 
 
-class _Serial:
+class Serial:
     @staticmethod
     def select() -> str:
         avail_ports = serial.tools.list_ports.comports()
@@ -21,6 +22,3 @@ class _Serial:
 
     def send(self, data: str) -> None:
         self._port.write(data.encode())
-
-
-Serial = _Serial
