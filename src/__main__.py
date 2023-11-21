@@ -58,7 +58,7 @@ def rolling():
         vals = fade_np(vals, 0.001)
         vals = smooth(vals, 2)
         vals = np.clip(vals, 0, 255)
-        ts = list(reversed(vals)) + list(vals)
+        ts = list(reversed(vals**2)) + list(vals**2)
         data = f"{{{'|'.join(map(lambda a: str(floor(a)), ts))}}}"
         if not BG:
             graph(ts, 20, clear=True)
@@ -75,7 +75,12 @@ def test():
         l[i] = 100
         s = "{" + "|".join(map(str, l)) + "}"
         port.send(s)
-        sleep(0.01)
+        res = port._port.read_all()
+        if res:
+            res = res.decode()
+            data = list(map(int, res.split("|")))
+            graph(data, 20, clear=True)
+        sleep(0.1)
 
 
 def main():
