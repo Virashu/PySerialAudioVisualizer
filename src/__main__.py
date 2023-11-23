@@ -4,11 +4,13 @@ import argparse
 import os
 import sys
 from math import floor
-from time import sleep
+from time import sleep, time
 
 from av_audio import Audio, smooth_hor, smooth_ver, fade_np, smooth
 from av_serial import Serial
 from graph import graph
+
+from random import randrange
 
 DIRNAME = __file__.replace("\\", "/").rsplit("/", 1)[0]
 BG = False
@@ -47,8 +49,17 @@ def default():
         sleep(0.01)
 
 
+def writefile(data):
+    try:
+        with open("D:/_TEMP/tmp/vis/data.txt", "w") as f:
+            f.write(data)
+    except:
+        pass
+
+
 def rolling():
-    vals = np.array([0] * 60, float)
+    vals = np.ndarray((60,), float)
+    delta = time()
 
     while True:
         audio.update()
@@ -60,27 +71,13 @@ def rolling():
         vals = np.clip(vals, 0, 255)
         ts = list(reversed(vals**2)) + list(vals**2)
         data = f"{{{'|'.join(map(lambda a: str(floor(a)), ts))}}}"
+        writefile(data)
         if not BG:
             graph(ts, 20, clear=True)
-        port.send(data)
-        sleep(0.01)
+        if time() - 0.05 > delta:
+            delta = time()
+            port.send(data)
 
-
-def test():
-    i = 0
-
-    while True:
-        l = [0] * 120
-        i = (i + 1) % 120
-        l[i] = 100
-        s = "{" + "|".join(map(str, l)) + "}"
-        port.send(s)
-        res = port._port.read_all()
-        if res:
-            res = res.decode()
-            data = list(map(int, res.split("|")))
-            graph(data, 20, clear=True)
-        sleep(0.1)
 
 
 def main():
@@ -94,7 +91,7 @@ def main():
     parser.add_argument(
         "-m",
         "--mode",
-        choices=["fft", "rolling", "test"],
+        choices=["fft", "rolling"],
         default="rolling",
         help="Visualization mode",
     )

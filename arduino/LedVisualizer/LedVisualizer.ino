@@ -8,6 +8,7 @@
 #define BLINK_TIMEOUT 2000  /* ms */
 #define BRIGHTNESS 255      /* 0 - 255 */
 #define MAX_BRIGHTNESS 30   /* 0 - 255 */
+#define BAUD_RATE 115200    /* bps */
 
 struct CRGB leds[LED_COUNT];
 
@@ -16,7 +17,7 @@ void setup() {
   pinMode(3, OUTPUT);
   digitalWrite(3, HIGH);
 
-  Serial.begin(115200);
+  Serial.begin(BAUD_RATE);
   Serial.setTimeout(5);
 
   FastLED.setBrightness(BRIGHTNESS);
@@ -39,6 +40,7 @@ void loop() {
     char first = Serial.read();
     if (first == '{') {
       lastSignal = millis();
+
       char data[MAX_BUFFER_SIZE];
       int amount = Serial.readBytesUntil('}', data, MAX_BUFFER_SIZE);
       data[amount] = NULL;
@@ -54,32 +56,16 @@ void loop() {
 
         offset = strchr(offset, '|');
       } while (offset++);
+
       FastLED.show();
     }
   } else {
     if (millis() - lastSignal <= BLINK_TIMEOUT) return;
+    if (millis() - blinkTimer <= BLINK_PERIOD) return;
     set_all(0, 0, 0);
-    if (millis() - blinkTimer > BLINK_PERIOD) {
-      blinkTimer = millis();
-      leds[0].setRGB(0, 0, blinkState ? 2 : 0);
-      blinkState ^= 1;
-    }
+    blinkTimer = millis();
+    leds[0].setRGB(0, 0, blinkState ? 2 : 0);
+    blinkState ^= 1;
     FastLED.show();
   }
-}
-
-String getValue(String data, char separator, int index) {
-  int found = 0;
-  int strIndex[] = {0, -1};
-  int maxIndex = data.length() - 1;
-
-  for (int i = 0; i <= maxIndex && found <= index; i++) {
-    if (data.charAt(i) == separator || i == maxIndex) {
-      found++;
-      strIndex[0] = strIndex[1] + 1;
-      strIndex[1] = (i == maxIndex) ? i + 1 : i;
-    }
-  }
-
-  return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
