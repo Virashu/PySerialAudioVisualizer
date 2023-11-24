@@ -1,3 +1,4 @@
+from typing import Collection, Iterable, Sequence, Sized, Union
 import numpy as np
 import pyaudio as pa
 
@@ -53,7 +54,7 @@ class Audio:
 
 
 def smooth_ver(
-    old: list[int | float], new: list[int | float], k: int | float
+    old: Iterable[int | float], new: Iterable[int | float], k: int | float
 ) -> list[int | float]:
     k = 1 / k
     return list(
@@ -64,12 +65,15 @@ def smooth_ver(
     )
 
 
-def smooth_hor(l: list[int | float], k: int) -> list[int | float]:
+def smooth_hor(l: Sequence[int | float], k: int) -> list[int | float]:
     """k is num of diodes in each direction"""
-    return [
-        sum((l[h] for h in range(max(i - k, 0), min(i + k, len(l))))) // ((k + 1) * 2)
-        for i in range(len(l))
-    ]
+    return list(
+        (
+            sum((l[h] for h in range(max(i - k, 0), min(i + k, len(l)))))
+            // ((k + 1) * 2)
+            for i in range(len(l))
+        )
+    )
 
 
 def fade(l: list[int | float]) -> list[int | float]:
