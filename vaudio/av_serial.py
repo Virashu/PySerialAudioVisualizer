@@ -10,16 +10,15 @@ class Serial:
         avail_ports = serial.tools.list_ports.comports()
 
         if len(avail_ports) == 0:
-            raise Exception("No serial ports found")
+            raise RuntimeError("No serial ports found")
 
         print("Select port:")
 
         for i, p in enumerate(avail_ports):
             print(f"[{i}] {p}")
 
-        port_num = int(input())
-        port = avail_ports[port_num].name
-        return port
+        port_index = int(input())
+        return avail_ports[port_index].name
 
     @staticmethod
     def list() -> None:

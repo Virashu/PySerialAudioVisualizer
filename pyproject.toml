@@ -8,11 +8,9 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 PyAudio = "^0.2.13"
-soundcard = "^0.4.2"
-shutup = "^0.2.0"
-matplotlib = "^3.8.0"
 pyserial = "^3.5"
 saaba = {git = "https://github.com/virashu/saaba"}
+numpy = "^1.26.4"
 
 
 [build-system]
