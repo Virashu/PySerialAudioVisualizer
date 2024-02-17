@@ -1,10 +1,10 @@
-from typing import Iterable, Sequence
-import numpy as np
-import pyaudio as pa
+__all__ = ["Audio", "smooth_ver", "smooth_hor", "fade_np", "fade", "smooth", "bounds"]
 
 import struct
+from typing import Iterable, Sequence
 
-__all__ = ["Audio", "smooth_ver", "smooth_hor", "fade_np", "fade", "smooth", "bounds"]
+import numpy as np
+import pyaudio as pa
 
 
 class Audio:
@@ -55,6 +55,9 @@ class Audio:
         self._buffer_size = buffer_size
 
         self.device_index = 1
+
+        self._stream: pa.Stream
+        self._values: np.ndarray
 
     def setup(self) -> None:
         self._stream = self._audio.open(

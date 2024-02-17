@@ -21,6 +21,16 @@ class Serial:
         port = avail_ports[port_num].name
         return port
 
+    @staticmethod
+    def list() -> None:
+        avail_ports = serial.tools.list_ports.comports()
+
+        if len(avail_ports) == 0:
+            raise RuntimeError("No serial ports found")
+
+        for i, p in enumerate(avail_ports):
+            print(f"[{i}] {p}")
+
     def __init__(self, port: str):
         self._port = serial.Serial(port=port, baudrate=115200)
 

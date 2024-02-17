@@ -1,6 +1,5 @@
 from typing import Iterable
 
-__name__ = "graph"
 
 # full, empty = "▮▯"
 full, empty = "▉░"

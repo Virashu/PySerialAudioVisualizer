@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "audio-stream"
+name = "vaudio"
 version = "0.1.0"
 description = ""
 authors = ["Vlad <89295404+Virashu@users.noreply.github.com>"]
@@ -12,6 +12,7 @@ soundcard = "^0.4.2"
 shutup = "^0.2.0"
 matplotlib = "^3.8.0"
 pyserial = "^3.5"
+saaba = {git = "https://github.com/virashu/saaba"}
 
 
 [build-system]

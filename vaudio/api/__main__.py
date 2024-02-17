@@ -1,4 +1,4 @@
-from .server import App, Request, Response
+from saaba import App, Request, Response
 
 
 def serve(data: dict[str, str]):
