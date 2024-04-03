@@ -6,6 +6,8 @@ from typing import Iterable, Sequence
 import numpy as np
 import pyaudio as pa
 
+from .typing import FloatArray
+
 
 class Audio:
     @staticmethod
@@ -57,7 +59,7 @@ class Audio:
         self.device_index = 1
 
         self._stream: pa.Stream
-        self._values: np.ndarray
+        self._values: FloatArray
 
     def setup(self) -> None:
         self._stream = self._audio.open(
@@ -71,14 +73,13 @@ class Audio:
 
     def update(self) -> None:
         data = self._stream.read(self._chunk)
-        dataInt = struct.unpack(str(self._chunk) + "h", data)
-        fft = np.abs(np.fft.fft(dataInt)) * 2 / (11000 * self._chunk)
+        data_int = struct.unpack(str(self._chunk) + "h", data)
+        fft = np.abs(np.fft.fft(data_int)) * 2 / (11000 * self._chunk)
         ins = np.linspace(
             0, self._chunk, num=self._buffer_size, dtype=np.int32, endpoint=False
         )
         values_60 = fft[ins]
-        values_60_int = (values_60 * 1000).astype(int)
-        self._values = values_60_int
+        self._values = (values_60 * 1000).astype(float)
 
     def loop(self) -> None:
         while True:
@@ -87,49 +88,80 @@ class Audio:
     def get_values(self) -> list[int | float]:
         return self._values.tolist()
 
-    def get_values_np(self) -> np.ndarray:
+    def get_values_np(self) -> FloatArray:
         return self._values
 
 
 def smooth_ver(
     old: Iterable[int | float], new: Iterable[int | float], k: int | float
 ) -> list[int | float]:
+    """Make numbers go up and down smoothly
+
+    k: koefficient of smoothing
+    """
+
     k = 1 / k
-    return list(
-        map(
-            lambda x: x[1] + (x[0] - x[1]) * k,
-            zip(new, old),
-        )
-    )
+    return [y + (x - y) * k for x, y in zip(new, old)]
 
 
-def smooth_hor(l: Sequence[int | float], k: int) -> list[int | float]:
-    """k is num of diodes in each direction"""
-    return list(
-        (
-            sum((l[h] for h in range(max(i - k, 0), min(i + k, len(l)))))
-            // ((k + 1) * 2)
-            for i in range(len(l))
-        )
-    )
+def smooth_hor(list_: Sequence[int | float], k: int) -> list[int | float]:
+    """Moving average
+
+    k: the size of the half-window (in one side)"""
+    return [
+        sum((list_[h] for h in range(max(i - k, 0), min(i + k, len(list_)))))
+        // ((k + 1) * 2)
+        for i in range(len(list_))
+    ]
 
 
-def fade(l: list[int | float]) -> list[int | float]:
-    return [l[i] - i for i in range(len(l))]
+def smooth_hor_fix(list_: Sequence[int | float], k: int) -> list[int | float]:
+    """Moving average
+
+    k: the size of the half-window (in one side)"""
+    return [
+        sum(list_[max(i - k, 0) : min(i + k, len(list_))]) // (k * 2 + 1)
+        for i in range(len(list_))
+    ]
 
 
-def fade_np(l: np.ndarray, amount: float = 1) -> np.ndarray:
-    a = l - (np.arange(len(l)) * amount)
+def fade(list_: list[int | float]) -> list[int | float]:
+    """Make numbers smaller with index
+
+    [10, 10, 10] -> [9, 8, 7]"""
+
+    return [max(list_[i] - i, 0) for i in range(len(list_))]
+
+
+def fade_np(arr: FloatArray, amount: float = 1) -> FloatArray:
+    """Make numbers smaller with index
+
+    arr: Array of numbers
+    amount: Amount of fading (default = 1)
+
+    Example:
+        [10, 10, 10] -> [9, 8, 7]
+    """
+
+    # Creates something similar to [1, 2, 3] if amount == 1
+    # and [2, 4, 6] if amount == 2, etc.
+    mask: FloatArray = np.arange(len(arr)) * amount
+
+    # Subtract and constrain at 0
+    a: FloatArray = arr - mask
     a[a < 0] = 0
 
     return a
 
 
-def bounds(l: list[int | float]) -> list[int | float]:
-    return [min(max(i, 0), 255) for i in l]
+def bounds(list_: list[int | float]) -> list[int | float]:
+    """Constrain values in list between 0 and 255"""
+    return [min(max(i, 0), 255) for i in list_]
 
 
-def smooth(y, box_pts):
+def smooth(y: FloatArray, box_pts: int) -> FloatArray:
+    """Smooth a numpy array with a box filter"""
+
     box = np.ones(box_pts) / box_pts
     y_smooth = np.convolve(y, box, mode="same")
     return y_smooth

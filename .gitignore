@@ -1,6 +1,10 @@
 _deprecated/
 debug.txt
 
+# Arduino binaries
+*.elf
+arduino/**/build
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

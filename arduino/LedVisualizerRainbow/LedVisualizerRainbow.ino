@@ -22,7 +22,7 @@ void setup() {
   Serial.begin(BAUD_RATE);
   Serial.setTimeout(5);
 
-  FastLED.setBrightness(BRIGHTNESS);
+  FastLED.setBrightness(BRIGHTNESS_SCALE);
   FastLED.addLeds<WS2812B, LED_DT, GRB>(leds, LED_COUNT);
   FastLED.show();
 }

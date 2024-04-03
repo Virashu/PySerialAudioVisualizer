@@ -1,5 +1,5 @@
 import requests
-import graph
+import vaudio.graph as graph
 from time import sleep
 
 

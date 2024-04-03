@@ -1,13 +1,14 @@
-#include "FastLED.h"
+#include <FastLED.h>
 
-#define LED_COUNT 120
-#define LED_DT 2 /* data pin */
-
+#define LED_DT 2             /* data pin */
+#define LED_COUNT 120        /* Full count of strip leds */
+#define BRIGHTNESS_SCALE 255 /* 0 - 255 */
+#define MAX_BRIGHTNESS 30    /* 0 - 255 */
+/* For blink when not connected */
+#define BLINK_PERIOD 1000  /* ms */
+#define BLINK_TIMEOUT 2000 /* ms */
+/* Serial byte buffer size; default is 481 (LED_COUNT*3 + LED_COUNT-1 + 2) */
 #define MAX_BUFFER_SIZE 481 /* bytes */
-#define BLINK_PERIOD 1000   /* ms */
-#define BLINK_TIMEOUT 2000  /* ms */
-#define BRIGHTNESS 255      /* 0 - 255 */
-#define MAX_BRIGHTNESS 30   /* 0 - 255 */
 #define BAUD_RATE 115200    /* bps */
 
 struct CRGB leds[LED_COUNT];
@@ -20,12 +21,12 @@ void setup() {
   Serial.begin(BAUD_RATE);
   Serial.setTimeout(5);
 
-  FastLED.setBrightness(BRIGHTNESS);
+  FastLED.setBrightness(BRIGHTNESS_SCALE);
   FastLED.addLeds<WS2812B, LED_DT, GRB>(leds, LED_COUNT);
   FastLED.show();
 }
 
-void set_all(int r, int g, int b) {
+void set_all(uint8_t r, uint8_t g, uint8_t b) {
   for (int i = 0; i < LED_COUNT; i++) leds[i].setRGB(r, g, b);
 
   FastLED.show();
@@ -49,10 +50,10 @@ void loop() {
       int i = 0;
 
       do {
-        int brt = atoi(offset);
+        uint8_t brt = atoi(offset);
         brt = constrain(brt, 0, MAX_BRIGHTNESS);
 
-        leds[i++].setRGB(brt, map(brt, 0, 255, 0, 50), brt);
+        leds[i++].setRGB(brt, map(brt, 0, 255, 0, 50), brt);  // Pink :3
 
         offset = strchr(offset, '|');
       } while (offset++);
