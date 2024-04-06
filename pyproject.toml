@@ -9,10 +9,13 @@ readme = "README.md"
 python = "^3.11"
 PyAudio = "^0.2.13"
 pyserial = "^3.5"
-saaba = {git = "https://github.com/virashu/saaba"}
+saaba = { git = "https://github.com/virashu/saaba" }
 numpy = "^1.26.4"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pylint]
+disable = "missing-module-docstring,missing-class-docstring,missing-function-docstring"

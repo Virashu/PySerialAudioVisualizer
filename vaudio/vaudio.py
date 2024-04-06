@@ -2,26 +2,47 @@
 Output audio visualizer
 """
 
+__all__ = ["AudioVisualizer"]
+
 import argparse
+import logging
 import os
 import sys
 import threading
-import logging
 from math import floor, isnan
 from time import sleep, time
+from typing import Iterable
 
 import saaba
+import numpy as np
 from serial import SerialException
 
-from .analyzer import AnalyzerRolling, AnalyzerFFT, Analyzer
+from .analyzer import Analyzer, AnalyzerFFT, AnalyzerRolling
 from .av_audio import Audio
 from .av_serial import Serial
-
+from .typing import FloatArray, IntArray
 
 DIRNAME: str = __file__.replace("\\", "/").rsplit("/", 1)[0]
 
+SERIAL_INTERVAL: float = 0.05
+
 
 logger = logging.getLogger(__name__)
+
+
+def _stringify_serial(data: Iterable[int | float]) -> str:
+    """
+    Convert list to string.
+    Prepare data for sending over serial
+    """
+
+    if isinstance(data, np.ndarray):
+        ints: IntArray = data.astype(int)
+        return "{" + "|".join(ints.astype(str)) + "}"
+
+    # For non-numpy floats
+    res = "{" + "|".join(("0" if isnan(a) else str(floor(a)) for a in data)) + "}"
+    return res
 
 
 class AudioVisualizer:
@@ -29,7 +50,7 @@ class AudioVisualizer:
 
     def __init__(self) -> None:
         self._data_mirrored: list[int] = [0] * 120
-        self._rendered_data: str = "{" + "|".join(["0"] * 120) + "}"
+        self._rendered_data: str = _stringify_serial(np.zeros(120, int).astype(str))
 
         self._background: bool = False
         self._running: bool = True
@@ -127,16 +148,11 @@ class AudioVisualizer:
 
         while self._running:
             analyzer.update()
-            values = analyzer.get_data_mirrored()
-            self._data_mirrored = values.tolist()
 
-            data = (
-                "{"
-                + "|".join(("0" if isnan(a) else str(floor(a)) for a in values))
-                + "}"
-            )
+            values: FloatArray = analyzer.get_data_mirrored()
+            self._data_mirrored = values.astype(int).tolist()
 
-            self._rendered_data = data
+            self._rendered_data = _stringify_serial(values)
 
     def _serial_thread(self) -> None:
         if self._args.port:
@@ -145,9 +161,9 @@ class AudioVisualizer:
         #     port_id = Serial.select()
         else:
             raise ValueError(
-                "Port not specified."
-                " Use --list argument to list available ports"
-                " or --port argument to select one"
+                "Port not specified. "
+                "Use --list argument to list available ports "
+                "or --port argument to select one"
             )
 
         port = None
@@ -159,7 +175,7 @@ class AudioVisualizer:
 
         delta: float = 0
         while self._running:
-            if time() - delta > 0.05:
+            if time() - delta > SERIAL_INTERVAL:
                 delta = time()
                 port.send(self._rendered_data)
 

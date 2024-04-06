@@ -5,12 +5,14 @@ import serial.tools.list_ports
 
 
 class Serial:
-
     @staticmethod
     def select() -> str:
-        """Select serial port by console and return its name
+        """
+        Select serial port by console and return its name
 
-        Example: 'COM1', '/dev/ttyUSB0'"""
+        Example: 'COM1', '/dev/ttyUSB0'
+        """
+
         avail_ports = serial.tools.list_ports.comports()
 
         if len(avail_ports) == 0:
