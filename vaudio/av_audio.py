@@ -6,7 +6,7 @@ from typing import Iterable, Sequence
 import numpy as np
 import pyaudio as pa
 
-from .typing import FloatArray
+from .typing import FloatArray, IntArray
 
 
 class Audio:
@@ -48,18 +48,18 @@ class Audio:
 
         return filtered[0]
 
-    def __init__(self, buffer_size: int = 60) -> None:
+    def __init__(self) -> None:
         self._chunk = 1024
         self._format = pa.paInt16
         self._channels = 1
         self._rate = 44100
         self._audio = pa.PyAudio()
-        self._buffer_size = buffer_size
+        self._k = 1000  # Koefficient for multiplying
 
         self.device_index = 1
 
         self._stream: pa.Stream
-        self._values: FloatArray
+        self._fft: FloatArray
 
     def setup(self) -> None:
         self._stream = self._audio.open(
@@ -72,24 +72,29 @@ class Audio:
         )
 
     def update(self) -> None:
-        data = self._stream.read(self._chunk)
-        data_int = struct.unpack(str(self._chunk) + "h", data)
-        fft = np.abs(np.fft.fft(data_int)) * 2 / (11000 * self._chunk)
-        ins = np.linspace(
-            0, self._chunk, num=self._buffer_size, dtype=np.int32, endpoint=False
-        )
-        values_60 = fft[ins]
-        self._values = (values_60 * 1000).astype(float)
+        # Read raw wave data
+        data: bytes = self._stream.read(self._chunk)
+        data_int = struct.unpack(f"{self._chunk}h", data)
+
+        # Calculate FFT
+        self._fft = np.abs(np.fft.fft(data_int)) * 2 / (11000 * self._chunk)
 
     def loop(self) -> None:
         while True:
             self.update()
 
-    def get_values(self) -> list[int | float]:
-        return self._values.tolist()
+    def get_values(self, n: int = 100) -> list[int | float]:
+        return self.get_values_np(n).tolist()
 
-    def get_values_np(self) -> FloatArray:
-        return self._values
+    def get_values_np(self, n: int = 100) -> FloatArray:
+        # ins: IntArray = np.linspace(0, self._chunk, n, dtype=int, endpoint=False)
+        # values_60: FloatArray = self._fft[ins]
+
+        # values = np.array([n.mean() for n in np.array_split(self._fft, n)])
+
+        values: FloatArray = np.resize(self._fft, n)
+
+        return (values * self._k).astype(float)
 
 
 def smooth_ver(

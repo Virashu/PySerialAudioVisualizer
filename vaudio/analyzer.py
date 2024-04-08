@@ -42,11 +42,11 @@ class AnalyzerRolling(Analyzer):
     def update(self) -> None:
         super().update()
 
-        avg = int(np.average(self.audio.get_values_np()))
-        avg = min(max(avg, 0), 255)
+        avg = int(np.mean(self.audio.get_values_np(60)))
+        avg = min(max(avg * 0.8, 0), 255 - 50)
 
         self.values = np.concatenate(([avg], self.values[0:-1]))
-        self.values = fade_np(self.values, 0.001)
+        self.values = fade_np(self.values, 0.002)
         self.values = smooth(self.values, 2)
 
     def get_data(self) -> FloatArray:
@@ -69,9 +69,9 @@ class AnalyzerFFT(Analyzer):
     def update(self) -> None:
         super().update()
         fft_prev: FloatArray = self.fft
-        self.fft = self.audio.get_values_np()
-        self.fft = np.array(smooth_ver(fft_prev, self.fft, 4))
-        sm: list[int | float] = smooth_hor(self.fft, 3)
+        self.fft = self.audio.get_values_np(60)
+        self.fft = np.array(smooth_ver(fft_prev, self.fft, 1.5), dtype=float)
+        sm: list[int | float] = smooth_hor(self.fft, 2)
         self.fft = np.array(sm)
 
     def get_data(self) -> FloatArray:

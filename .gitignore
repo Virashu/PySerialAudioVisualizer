@@ -1,5 +1,6 @@
 _deprecated/
 debug.txt
+*.log
 
 # Arduino binaries
 *.elf

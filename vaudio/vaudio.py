@@ -83,6 +83,8 @@ class AudioVisualizer:
         http_thread = threading.Thread(target=self._http_thread, daemon=True)
         http_thread.start()
 
+        logger.info("Running...")
+
         while self._running:
             # To stay responsible to things like KeyboardInterrupt
             sleep(1e6)
@@ -104,10 +106,6 @@ class AudioVisualizer:
     def _set_mode(self) -> None:
         if "pythonw" in sys.executable:
             self._background = True
-            with open(f"{DIRNAME}/../debug.txt", "w", encoding="utf-8") as stderr:
-                sys.stderr = stderr
-            with open(os.devnull, "w", encoding="utf-8") as null:
-                sys.stdout = null
 
     def _parse_args(self) -> None:
         parser = argparse.ArgumentParser(prog="PySerialAudioVisualizer")
@@ -127,6 +125,8 @@ class AudioVisualizer:
         self._args = parser.parse_args()
 
     def _audio_thread(self) -> None:
+        logger.info("Audio thread started")
+
         self._audio = Audio()
         index = Audio.select_by_name("Stereo Mix")
         if index is not None:
@@ -146,15 +146,19 @@ class AudioVisualizer:
             case _:
                 raise ValueError(f"Invalid mode: {self._args.mode}")
 
+        logger.info("Audio loop running")
         while self._running:
             analyzer.update()
 
             values: FloatArray = analyzer.get_data_mirrored()
+
             self._data_mirrored = values.astype(int).tolist()
 
             self._rendered_data = _stringify_serial(values)
 
     def _serial_thread(self) -> None:
+        logger.info("Serial thread started")
+
         if self._args.port:
             port_id = self._args.port
         # elif not self._background:
