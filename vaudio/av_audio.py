@@ -5,8 +5,7 @@ from typing import Iterable, Sequence
 
 import numpy as np
 import pyaudio as pa
-
-from .typing import FloatArray, IntArray
+from .typing import FloatArray
 
 
 class Audio:
