@@ -67,7 +67,7 @@ class AudioVisualizer:
 
         if self._args.list:
             Serial.list()
-            return
+            sys.exit(0)
 
     def run(self) -> None:
         """Start the visualizer"""
@@ -175,7 +175,10 @@ class AudioVisualizer:
             try:
                 port = Serial(port_id)
             except SerialException:
+                logger.warning(f"Serial port {port_id} not found. Trying again...")
                 sleep(1)
+
+        logger.info(f"Serial port {port_id} opened")
 
         delta: float = 0
         while self._running:

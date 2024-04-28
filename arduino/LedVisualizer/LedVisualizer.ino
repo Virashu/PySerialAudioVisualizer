@@ -4,12 +4,11 @@
 #define LED_COUNT 120        /* Full count of strip leds */
 #define BRIGHTNESS_SCALE 255 /* 0 - 255 */
 #define MAX_BRIGHTNESS 30    /* 0 - 255 */
-/* For blink when not connected */
-#define BLINK_PERIOD 1000  /* ms */
-#define BLINK_TIMEOUT 2000 /* ms */
-/* Serial byte buffer size; default is 481 (LED_COUNT*3 + LED_COUNT-1 + 2) */
-#define MAX_BUFFER_SIZE 481 /* bytes */
-#define BAUD_RATE 115200    /* bps */
+#define BLINK_PERIOD 1000    /* (ms) For blink when not connected */
+#define BLINK_TIMEOUT 2000   /* (ms) Wait time before blink */
+#define MAX_BUFFER_SIZE 481  /* (bytes) Serial buffer size; default is 481*/
+                             /* (LED_COUNT*3 + LED_COUNT-1 + 2)    */
+#define BAUD_RATE 115200     /* bps */
 
 struct CRGB leds[LED_COUNT];
 
@@ -46,7 +45,7 @@ void loop() {
       int amount = Serial.readBytesUntil('}', data, MAX_BUFFER_SIZE);
       data[amount] = NULL;
 
-      char* offset = data;
+      char *offset = data;
       int i = 0;
 
       do {
