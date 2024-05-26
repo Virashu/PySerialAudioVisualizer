@@ -28,8 +28,8 @@ logger.setLevel(logging.INFO)
 
 
 def main():
-    visualizer = AudioVisualizer()
     try:
+        visualizer = AudioVisualizer()
         visualizer.run()
     except KeyboardInterrupt:
         visualizer.stop()
@@ -37,3 +37,5 @@ def main():
         print("Goodbye!")
     except Exception as e:
         logger.exception("Uncaught exception: %s", e)
+    finally:
+        print("\x1b[?25h", end="")

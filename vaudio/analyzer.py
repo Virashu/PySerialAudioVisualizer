@@ -71,7 +71,7 @@ class AnalyzerFFT(Analyzer):
         fft_prev: FloatArray = self.fft
         self.fft = self.audio.get_values_np(60)
         self.fft = np.array(smooth_ver(fft_prev, self.fft, 1.5), dtype=float)
-        sm: list[int | float] = smooth_hor(self.fft, 2)
+        sm: list[int | float] = smooth_hor(self.fft, 2)  # type: ignore
         self.fft = np.array(sm)
 
     def get_data(self) -> FloatArray:

@@ -6,7 +6,6 @@ __all__ = ["AudioVisualizer"]
 
 import argparse
 import logging
-import os
 import sys
 import threading
 from math import floor, isnan
@@ -128,11 +127,20 @@ class AudioVisualizer:
         logger.info("Audio thread started")
 
         self._audio = Audio()
-        index = Audio.select_by_name("Stereo Mix")
+        if sys.platform == "win32":
+            device_name = "Stereo Mix"
+        elif sys.platform == "linux":
+            device_name = "default"
+        else:
+            device_name = "default"
+
+        index = Audio.select_by_name(device_name)
+
         if index is not None:
             self._audio.device_index = index
         else:
-            logger.warning("No audio input device found")
+            logger.error("No audio input device found")
+            sys.exit(1)
 
         self._audio.setup()
 
