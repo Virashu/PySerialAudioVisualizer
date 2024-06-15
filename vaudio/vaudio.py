@@ -7,10 +7,10 @@ __all__ = ["AudioVisualizer"]
 import argparse
 import logging
 import sys
-import threading
+from threading import Thread
 from math import floor, isnan
 from time import sleep, time
-from typing import Iterable
+from typing import Iterable, Literal
 
 import saaba
 import numpy as np
@@ -19,11 +19,8 @@ from serial import SerialException
 from .analyzer import Analyzer, AnalyzerFFT, AnalyzerRolling
 from .av_audio import Audio
 from .av_serial import Serial
-from .typing import FloatArray, IntArray
 
 DIRNAME: str = __file__.replace("\\", "/").rsplit("/", 1)[0]
-
-SERIAL_INTERVAL: float = 0.05
 
 
 logger = logging.getLogger(__name__)
@@ -36,12 +33,70 @@ def _stringify_serial(data: Iterable[int | float]) -> str:
     """
 
     if isinstance(data, np.ndarray):
-        ints: IntArray = data.astype(int)
-        return "{" + "|".join(ints.astype(str)) + "}"
+        return "{" + "|".join(data.astype(int).astype(str)) + "}"
 
     # For non-numpy floats
     res = "{" + "|".join(("0" if isnan(a) else str(floor(a)) for a in data)) + "}"
     return res
+
+
+class VAudioService:
+    def __init__(self, analyzer: Analyzer) -> None:
+        self.analyzer = analyzer
+        self.running: bool
+
+    def run(self) -> None:
+        self.running = True
+
+    def stop(self) -> None:
+        self.running = False
+
+
+class VAudioHttpServer(VAudioService):
+    def __init__(self, analyzer: Analyzer) -> None:
+        super().__init__(analyzer)
+        self._server = saaba.App()
+
+        @self._server.get("/")
+        def _(_: saaba.Request, res: saaba.Response) -> None:
+            res.send({"data": self.analyzer.get_data_mirrored().astype(int).tolist()})
+
+    def run(self) -> None:
+        self._server.listen("0.0.0.0", 7777)
+
+    def stop(self) -> None:
+        self._server.stop()
+
+
+class VAudioSerial(VAudioService):
+    def __init__(self, analyzer: Analyzer, port: str) -> None:
+        super().__init__(analyzer)
+
+        self.port_name = port
+        self.send_interval: float = 0.05
+
+    def run(self) -> None:
+        super().run()
+        port = None
+
+        while port is None:
+            if not self.running:
+                return
+
+            try:
+                port = Serial(self.port_name)
+            except SerialException:
+                logger.warning(
+                    "Serial port %s not found. Retry after 1 second" % self.port_name
+                )
+                sleep(1)
+
+        delta: float = 0
+        while self.running:
+            if time() - delta > self.send_interval:
+                delta = time()
+                data = _stringify_serial(self.analyzer.get_data_mirrored())
+                port.send(data)
 
 
 class AudioVisualizer:
@@ -51,18 +106,14 @@ class AudioVisualizer:
         self._data_mirrored: list[int] = [0] * 120
         self._rendered_data: str = _stringify_serial(np.zeros(120, int).astype(str))
 
-        self._background: bool = False
         self._running: bool = True
 
         self._args: argparse.Namespace
-        self._audio: Audio
-        self._server: saaba.App
 
-        self._set_mode()
+        self.services: list[VAudioService] = []
+        self.threads: list[Thread] = []
+
         self._parse_args()
-
-        if not self._background:
-            sys.stdout.write("\x1b[?25l")  # hide cursor
 
         if self._args.list:
             Serial.list()
@@ -70,47 +121,78 @@ class AudioVisualizer:
 
     def run(self) -> None:
         """Start the visualizer"""
-        audio_thread = threading.Thread(target=self._audio_thread, daemon=True)
-        audio_thread.start()
 
-        if self._args.no_serial:
-            serial_thread = None
+        audio = Audio()
+
+        match sys.platform:
+            case "win32":
+                device_name = "Stereo Mix"
+            case _:
+                device_name = "default"
+
+        logger.info("Chosen device: %s", device_name)
+
+        index = Audio.select_by_name(device_name)
+
+        if index is not None:
+            audio.device_index = index
         else:
-            serial_thread = threading.Thread(target=self._serial_thread, daemon=True)
-            serial_thread.start()
+            raise RuntimeError("No audio input device found")
 
-        http_thread = threading.Thread(target=self._http_thread, daemon=True)
-        http_thread.start()
+        audio.setup()
 
-        logger.info("Running...")
+        analyzer: Analyzer
+
+        mode: Literal["fft", "rolling"] = self._args.mode
+
+        match mode:
+            case "fft":
+                analyzer = AnalyzerFFT(audio)
+            case "rolling":
+                analyzer = AnalyzerRolling(audio)
+
+        if not self._args.no_serial:
+            self.services.append(VAudioSerial(analyzer, self._args.port))
+
+        self.services.append(VAudioHttpServer(analyzer))
+
+        for s in self.services:
+            _t = Thread(target=s.run, daemon=True)
+            _t.start()
+            logger.info("Service started: %s", s.__class__.__name__)
+            self.threads.append(_t)
 
         while self._running:
             # To stay responsible to things like KeyboardInterrupt
-            sleep(1e6)
+            # sleep(0.1)
+            analyzer.update()
 
-        audio_thread.join()
+        for s in self.services:
+            s.stop()
 
-        if serial_thread:
-            serial_thread.join()
-
-        http_thread.join()
+        for t in self.threads:
+            t.join()
 
     def stop(self) -> None:
         """Interrupt execution"""
         self._running = False
 
-        if self._server:
-            self._server.stop()
-
-    def _set_mode(self) -> None:
-        if "pythonw" in sys.executable:
-            self._background = True
-
     def _parse_args(self) -> None:
         parser = argparse.ArgumentParser(prog="PySerialAudioVisualizer")
-        parser.add_argument("-p", "--port")
-        # parser.add_argument("-s", "--select", action="store_true")
-        parser.add_argument("--noserial", action="store_true", dest="no_serial")
+
+        # Serial port
+        parser_serial = parser.add_mutually_exclusive_group(required=True)
+
+        parser_serial.add_argument("-p", "--port", help="Select port by name")
+        parser_serial.add_argument(
+            "-l",
+            "--list",
+            action="store_true",
+            help="List available ports",
+        )
+        parser_serial.add_argument("--noserial", action="store_true", dest="no_serial")
+
+        # Analyzer
         parser.add_argument(
             "-m",
             "--mode",
@@ -118,87 +200,11 @@ class AudioVisualizer:
             default="rolling",
             help="Visualization mode",
         )
-        parser.add_argument(
-            "-l", "--list", action="store_true", help="List available ports"
-        )
+
         self._args = parser.parse_args()
 
-    def _audio_thread(self) -> None:
-        logger.info("Audio thread started")
-
-        self._audio = Audio()
-        if sys.platform == "win32":
-            device_name = "Stereo Mix"
-        elif sys.platform == "linux":
-            device_name = "default"
-        else:
-            device_name = "default"
-
-        index = Audio.select_by_name(device_name)
-
-        if index is not None:
-            self._audio.device_index = index
-        else:
-            logger.error("No audio input device found")
-            sys.exit(1)
-
-        self._audio.setup()
-
-        analyzer: Analyzer
-
-        match self._args.mode:
-            case "fft":
-                analyzer = AnalyzerFFT(self._audio)
-            case "rolling":
-                analyzer = AnalyzerRolling(self._audio)
-            case _:
-                raise ValueError(f"Invalid mode: {self._args.mode}")
-
-        logger.info("Audio loop running")
-        while self._running:
-            analyzer.update()
-
-            values: FloatArray = analyzer.get_data_mirrored()
-
-            self._data_mirrored = values.astype(int).tolist()
-
-            self._rendered_data = _stringify_serial(values)
-
-    def _serial_thread(self) -> None:
-        logger.info("Serial thread started")
-
-        if self._args.port:
-            port_id = self._args.port
-        # elif not self._background:
-        #     port_id = Serial.select()
-        else:
-            raise ValueError(
-                "Port not specified. "
-                "Use --list argument to list available ports "
-                "or --port argument to select one"
-            )
-
-        port = None
-        while not port:
-            try:
-                port = Serial(port_id)
-            except SerialException:
-                logger.warning(f"Serial port {port_id} not found. Trying again...")
-                sleep(1)
-
-        logger.info(f"Serial port {port_id} opened")
-
-        delta: float = 0
-        while self._running:
-            if time() - delta > SERIAL_INTERVAL:
-                delta = time()
-                port.send(self._rendered_data)
-
-    def _http_thread(self) -> None:
-        self._server = saaba.App()
-
-        @self._server.get("/")
-        def _(_: saaba.Request, res: saaba.Response) -> None:
-            res.send({"data": self._data_mirrored})
-
-        self._server.listen("0.0.0.0", 7777)
+        # Groups:
+        # - General
+        # - Analyzer
+        # - Serial
+        # - HTTP
