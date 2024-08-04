@@ -1,6 +1,5 @@
 from typing import Iterable
 
-
 # full, empty = "▮▯"
 full, empty = "▉░"
 

@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+
 from vaudio.av_audio import Audio
 
 __a = Audio()

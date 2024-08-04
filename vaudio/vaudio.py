@@ -7,13 +7,13 @@ __all__ = ["AudioVisualizer"]
 import argparse
 import logging
 import sys
-from threading import Thread
 from math import floor, isnan
+from threading import Thread
 from time import sleep, time
 from typing import Iterable, Literal
 
-import saaba
 import numpy as np
+import saaba
 from serial import SerialException
 
 from .analyzer import Analyzer, AnalyzerFFT, AnalyzerRolling

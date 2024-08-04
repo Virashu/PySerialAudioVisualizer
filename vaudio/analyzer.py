@@ -4,7 +4,7 @@ from abc import abstractmethod
 
 import numpy as np
 
-from .av_audio import Audio, smooth_ver, smooth_hor, fade_np, smooth
+from .av_audio import Audio, fade_np, smooth, smooth_hor, smooth_ver
 from .typing import FloatArray
 
 

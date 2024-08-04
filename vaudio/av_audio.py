@@ -1,16 +1,17 @@
 __all__ = ["Audio", "smooth_ver", "smooth_hor", "fade_np", "fade", "smooth", "bounds"]
 
 import struct
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Sequence
 
 import numpy as np
 import pyaudio as pa
+
 from .typing import FloatArray
 
 
 class Audio:
     @staticmethod
-    def select() -> str | int | float | None:
+    def select() -> str | None:
         temp_audio = pa.PyAudio()
         device_count = temp_audio.get_device_count()
 
@@ -20,9 +21,13 @@ class Audio:
                 print(f"[{i}] {device.get('name')}")
 
         index = int(input())
-        port: str | int | float | None = temp_audio.get_device_info_by_index(index).get(
-            "name"
-        )
+        _x: Any = temp_audio.get_device_info_by_index(index).get("name")
+
+        if not isinstance(_x, str):
+            return None
+
+        port: str = _x
+
         return port
 
     @staticmethod
@@ -30,7 +35,7 @@ class Audio:
         temp_audio = pa.PyAudio()
         device_count = temp_audio.get_device_count()
 
-        filtered = []
+        filtered: list[int] = []
         for i in range(device_count):
             device = temp_audio.get_device_info_by_index(i)
             if device.get("maxInputChannels"):
