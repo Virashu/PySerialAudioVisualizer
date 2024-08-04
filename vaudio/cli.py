@@ -31,9 +31,10 @@ logger.setLevel(logging.INFO)
 
 def main():
     visualizer = AudioVisualizer()
-    try:
-        print("\x1b[?25l", end="")  # Hide cursor
 
+    print("\x1b[?25l", end="")  # Hide cursor
+
+    try:
         visualizer.run()
 
     except KeyboardInterrupt:

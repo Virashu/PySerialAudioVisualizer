@@ -26,6 +26,14 @@ DIRNAME: str = __file__.replace("\\", "/").rsplit("/", 1)[0]
 logger = logging.getLogger(__name__)
 
 
+class Args(argparse.Namespace):
+    list: bool
+    mode: Literal["fft", "rolling"]
+    port: str
+    no_serial: bool
+    device: str | None
+
+
 def _stringify_serial(data: Iterable[int | float]) -> str:
     """
     Convert list to string.
@@ -77,6 +85,7 @@ class VAudioSerial(VAudioService):
 
     def run(self) -> None:
         super().run()
+
         port = None
 
         while port is None:
@@ -108,7 +117,7 @@ class AudioVisualizer:
 
         self._running: bool = True
 
-        self._args: argparse.Namespace
+        self._args: Args
 
         self.services: list[VAudioService] = []
         self.threads: list[Thread] = []
@@ -124,11 +133,14 @@ class AudioVisualizer:
 
         audio = Audio()
 
-        match sys.platform:
-            case "win32":
-                device_name = "Stereo Mix"
-            case _:
-                device_name = "default"
+        if self._args.device is not None:
+            device_name = self._args.device
+        else:
+            match sys.platform:
+                case "win32":
+                    device_name = "Stereo Mix"
+                case _:
+                    device_name = "default"
 
         logger.info("Chosen device: %s", device_name)
 
@@ -143,9 +155,7 @@ class AudioVisualizer:
 
         analyzer: Analyzer
 
-        mode: Literal["fft", "rolling"] = self._args.mode
-
-        match mode:
+        match self._args.mode:
             case "fft":
                 analyzer = AnalyzerFFT(audio)
             case "rolling":
@@ -178,6 +188,8 @@ class AudioVisualizer:
         self._running = False
 
     def _parse_args(self) -> None:
+        self._args = Args()
+
         parser = argparse.ArgumentParser(prog="PySerialAudioVisualizer")
 
         # Serial port
@@ -200,8 +212,11 @@ class AudioVisualizer:
             default="rolling",
             help="Visualization mode",
         )
+        parser.add_argument(
+            "-d", "--device", default=None, help="Select audio input device by name"
+        )
 
-        self._args = parser.parse_args()
+        parser.parse_args(namespace=self._args)
 
         # Groups:
         # - General
