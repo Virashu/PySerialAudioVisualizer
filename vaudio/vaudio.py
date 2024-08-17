@@ -16,7 +16,13 @@ import numpy as np
 import saaba
 from serial import SerialException
 
-from .analyzer import Analyzer, AnalyzerFFT, AnalyzerRolling, AnalyzerRollingEase
+from .analyzer import (
+    Analyzer,
+    AnalyzerFFT,
+    AnalyzerFlat,
+    AnalyzerRolling,
+    AnalyzerRollingEase,
+)
 from .av_audio import Audio
 from .av_serial import Serial
 
@@ -28,10 +34,11 @@ logger = logging.getLogger(__name__)
 
 class Args(argparse.Namespace):
     list: bool
-    mode: Literal["fft", "rolling", "rollingease"]
+    mode: Literal["fft", "rolling", "rollingease", "flat"]
     port: str
     no_serial: bool
     device: str | None
+    size: int
 
 
 def to_hex(n: int) -> str:
@@ -119,17 +126,21 @@ class AudioVisualizer:
     """Audio visualizer class"""
 
     def __init__(self) -> None:
-        self._data_mirrored: list[int] = [0] * 120
-        self._rendered_data: str = _stringify_serial(np.zeros(120, int).astype(str))
-
         self._running: bool = True
 
         self._args: Args
 
+        self._parse_args()
+
+        self.size = self._args.size
+
+        self._data_mirrored: list[int] = [0] * self.size
+        self._rendered_data: str = _stringify_serial(
+            np.zeros(self.size, int).astype(str)
+        )
+
         self.services: list[VAudioService] = []
         self.threads: list[Thread] = []
-
-        self._parse_args()
 
         if self._args.list:
             Serial.list()
@@ -165,11 +176,13 @@ class AudioVisualizer:
 
         match self._args.mode:
             case "fft":
-                analyzer = AnalyzerFFT(audio)
+                analyzer = AnalyzerFFT(self.size, audio)
             case "rolling":
-                analyzer = AnalyzerRolling(audio)
+                analyzer = AnalyzerRolling(self.size, audio)
             case "rollingease":
-                analyzer = AnalyzerRollingEase(audio)
+                analyzer = AnalyzerRollingEase(self.size, audio)
+            case "flat":
+                analyzer = AnalyzerFlat(self.size, audio)
 
         if not self._args.no_serial:
             self.services.append(VAudioSerial(analyzer, self._args.port))
@@ -218,13 +231,15 @@ class AudioVisualizer:
         parser.add_argument(
             "-m",
             "--mode",
-            choices=["fft", "rolling", "rollingease"],
+            choices=["fft", "rolling", "rollingease", "flat"],
             default="rolling",
             help="Visualization mode",
         )
         parser.add_argument(
             "-d", "--device", default=None, help="Select audio input device by name"
         )
+
+        parser.add_argument("-s", "--size", default=120, type=int)
 
         parser.parse_args(namespace=self._args)
 

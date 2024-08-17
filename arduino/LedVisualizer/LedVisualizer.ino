@@ -17,7 +17,10 @@
 struct CRGB leds[LED_COUNT];
 
 void setup() {
-  // For convenient connection
+  // For convenient connection (NANO)
+  // x GND
+  // x D2 (data)
+  // x D3 (5v)
   pinMode(3, OUTPUT);
   digitalWrite(3, HIGH);
 

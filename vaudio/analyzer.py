@@ -5,6 +5,7 @@ __all__ = (
     "AnalyzerRolling",
     "AnalyzerFFT",
     "AnalyzerRollingEase",
+    "AnalyzerFlat",
 )
 
 from abc import abstractmethod
@@ -27,12 +28,14 @@ if TYPE_CHECKING:
 class Analyzer:
     """Base class for analyzers"""
 
-    def __init__(self, audio: None | Audio = None) -> None:
+    def __init__(self, size: int, audio: None | Audio = None) -> None:
         if audio:
             self.audio = audio
         else:
             self.audio = Audio()
             self.audio.setup()
+
+        self.size = size
 
     def update(self) -> None:
         self.audio.update()
@@ -52,14 +55,14 @@ class Analyzer:
 class AnalyzerRolling(Analyzer):
     """Create audio 'waves'"""
 
-    def __init__(self, audio: None | Audio = None) -> None:
-        super().__init__(audio)
-        self.values: FloatArray = np.ndarray((60,), float)
+    def __init__(self, size: int, audio: None | Audio = None) -> None:
+        super().__init__(size, audio)
+        self.values: FloatArray = np.ndarray((self.size,), float)
 
     def update(self) -> None:
         super().update()
 
-        avg = int(np.mean(self.audio.get_values_np(60)))
+        avg = int(np.mean(self.audio.get_values_np(self.size)))
         avg = min(max(avg * 0.8, 0), 255 - 50)
 
         self.values = np.concatenate(([avg], self.values[0:-1]))
@@ -68,8 +71,7 @@ class AnalyzerRolling(Analyzer):
 
     def get_data(self) -> FloatArray:
         values_adj = self.values**2
-        values_adj = np.clip(values_adj, 0, 255)
-        return values_adj
+        return np.clip(values_adj, 0, 255)
 
     def get_data_mirrored(self) -> FloatArray:
         v = self.get_data()
@@ -79,14 +81,14 @@ class AnalyzerRolling(Analyzer):
 class AnalyzerFFT(Analyzer):
     """Analyze audio with Fast Fourier Transform (by frequency)"""
 
-    def __init__(self, audio: Audio | None = None) -> None:
-        super().__init__(audio)
-        self.fft: FloatArray = np.ndarray((60,), float)
+    def __init__(self, size: int, audio: Audio | None = None) -> None:
+        super().__init__(size, audio)
+        self.fft: FloatArray = np.ndarray((self.size,), float)
 
     def update(self) -> None:
         super().update()
         fft_prev: FloatArray = self.fft
-        self.fft = self.audio.get_values_np(60)
+        self.fft = self.audio.get_values_np(self.size)
         self.fft = np.array(
             smooth_ver_directional(fft_prev, self.fft, 0.6, 1e-9),
             dtype=float,
@@ -104,14 +106,14 @@ class AnalyzerFFT(Analyzer):
 class AnalyzerRollingEase(Analyzer):
     """Create audio 'waves' - using standard smooth method"""
 
-    def __init__(self, audio: Audio | None = None) -> None:
-        super().__init__(audio)
-        self.values: FloatArray = np.ndarray((60,), float)
+    def __init__(self, size: int, audio: Audio | None = None) -> None:
+        super().__init__(size, audio)
+        self.values: FloatArray = np.ndarray((self.size,), float)
 
     def update(self) -> None:
         super().update()
 
-        avg = int(np.mean(self.audio.get_values_np(60)))
+        avg = int(np.mean(self.audio.get_values_np(self.size)))
         avg = min(max(avg * 0.8, 0), 255 - 50)
         new = avg
 
@@ -124,8 +126,40 @@ class AnalyzerRollingEase(Analyzer):
 
     def get_data(self) -> FloatArray:
         values_adj = self.values**2
-        values_adj = np.clip(values_adj, 0, 255)
-        return values_adj
+        return np.clip(values_adj, 0, 255)
+
+    def get_data_mirrored(self) -> FloatArray:
+        v = self.get_data()
+        return np.concatenate((np.flip(v), v))
+
+
+class AnalyzerFlat(Analyzer):
+    """Flat"""
+
+    def __init__(self, size: int, audio: Audio | None = None) -> None:
+        super().__init__(size, audio)
+        self.value: float = 0.0
+        self.history: FloatArray = np.ndarray(10, float)
+
+    def update(self) -> None:
+        super().update()
+
+        avg = int(np.mean(self.audio.get_values_np(self.size)))
+        new: float = min(max(avg * 0.8, 0), 255 - 50)
+
+        prv: float = self.history[0]
+        val = prv + (new - prv) * 0.0000000000001
+
+        self.history = np.concatenate(([val], self.history[:-1]))
+
+        self.value = avg
+
+        # self.values = smooth(self.values, 3, 0.9)
+
+    def get_data(self) -> FloatArray:
+        values = np.full(self.size, self.value, float)
+        values_adj = values**2
+        return np.clip(values_adj, 0, 255, dtype=float)
 
     def get_data_mirrored(self) -> FloatArray:
         v = self.get_data()
