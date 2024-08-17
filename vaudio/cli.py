@@ -1,11 +1,14 @@
 import logging
 import os
 import sys
+from pathlib import Path
 
 from .vaudio import AudioVisualizer
 
-logging.getLogger("http.server").setLevel(logging.WARN)
-logging.getLogger("saaba").setLevel(logging.WARN)
+ROOT: str = str(Path(__file__).parent.parent.resolve())
+
+logging.getLogger("http.server").setLevel(logging.WARNING)
+logging.getLogger("saaba").setLevel(logging.WARNING)
 
 logger = logging.getLogger()
 
@@ -19,7 +22,8 @@ if "pythonw" not in sys.executable:
     logger.addHandler(handler)
 
 else:
-    null = open(os.devnull, "w", encoding="utf-8")
+    null = Path(os.devnull).open("w")  # noqa: SIM115
+    # (the file should be open till the end of execution)
 
     sys.stdout = null
     sys.stderr = null
@@ -29,7 +33,7 @@ else:
 logger.setLevel(logging.INFO)
 
 
-def main():
+def main() -> None:
     visualizer = AudioVisualizer()
 
     print("\x1b[?25l", end="")  # Hide cursor
@@ -44,7 +48,9 @@ def main():
         print("Goodbye!")
 
     except Exception as e:
-        logger.exception("Uncaught exception: %s", e)
+        with Path(f"{ROOT}/crash.log").open("w") as f:
+            f.write(str(e))
+        logger.exception("Uncaught exception")
 
     finally:
         print("\x1b[?25h", end="")  # Show cursor

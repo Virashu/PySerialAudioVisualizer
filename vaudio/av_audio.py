@@ -1,12 +1,24 @@
-__all__ = ["Audio", "smooth_ver", "smooth_hor", "fade_np", "fade", "smooth", "bounds"]
+from __future__ import annotations
+
+__all__ = [
+    "Audio",
+    "smooth_ver",
+    "smooth_hor",
+    "fade_np",
+    "fade",
+    "smooth",
+    "bounds",
+    "smooth_ver_directional",
+]
 
 import struct
-from typing import Any, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, Iterable, Sequence
 
 import numpy as np
 import pyaudio as pa
 
-from .typing import FloatArray
+if TYPE_CHECKING:
+    from .typing import FloatArray
 
 
 class Audio:
@@ -18,7 +30,7 @@ class Audio:
         for i in range(device_count):
             device = temp_audio.get_device_info_by_index(i)
             if device.get("maxInputChannels"):
-                print(f"[{i}] {device.get('name')}")
+                print(f"[{i}] {device.get('name')}")  # noqa: T201 (for user interaction)
 
         index = int(input())
         _x: Any = temp_audio.get_device_info_by_index(index).get("name")
@@ -102,7 +114,7 @@ class Audio:
 
 
 def smooth_ver(
-    old: Iterable[int | float], new: Iterable[int | float], k: int | float
+    old: Iterable[int | float], new: Iterable[int | float], k: float
 ) -> list[int | float]:
     """Make numbers go up and down smoothly
 
@@ -113,13 +125,25 @@ def smooth_ver(
     return [y + (x - y) * k for x, y in zip(new, old)]
 
 
+def smooth_ver_directional(
+    old: Iterable[int | float], new: Iterable[int | float], k_up: float, k_down: float
+) -> list[int | float]:
+    """Make numbers go up and down smoothly
+
+    k: koefficient of smoothing (0-1)
+    """
+
+    return [y + (x - y) * (k_up if (x > y) else k_down) for x, y in zip(new, old)]
+
+
 def smooth_hor(list_: Sequence[int | float], k: int) -> list[int | float]:
     """Moving average
 
-    k: the size of the half-window (in one side)"""
+    k: the size of the half-window (in one side)
+    """
     return [
-        sum((list_[h] for h in range(max(i - k, 0), min(i + k, len(list_)))))
-        // ((k + 1) * 2)
+        sum(list_[h] for h in range(max(i - k, 0), min(i + k, len(list_))))
+        // ((k + 1) * 2 - list_[max(i - k, 0) : min(i + k, len(list_))].count(0))
         for i in range(len(list_))
     ]
 
@@ -127,7 +151,8 @@ def smooth_hor(list_: Sequence[int | float], k: int) -> list[int | float]:
 def smooth_hor_fix(list_: Sequence[int | float], k: int) -> list[int | float]:
     """Moving average
 
-    k: the size of the half-window (in one side)"""
+    k: the size of the half-window (in one side)
+    """
     return [
         sum(list_[max(i - k, 0) : min(i + k, len(list_))]) // (k * 2 + 1)
         for i in range(len(list_))
@@ -137,7 +162,8 @@ def smooth_hor_fix(list_: Sequence[int | float], k: int) -> list[int | float]:
 def fade(list_: list[int | float]) -> list[int | float]:
     """Make numbers smaller with index
 
-    [10, 10, 10] -> [9, 8, 7]"""
+    [10, 10, 10] -> [9, 8, 7]
+    """
 
     return [max(list_[i] - i, 0) for i in range(len(list_))]
 
@@ -148,8 +174,9 @@ def fade_np(arr: FloatArray, amount: float = 1) -> FloatArray:
     arr: Array of numbers
     amount: Amount of fading (default = 1)
 
-    Example:
+    Examples:
         [10, 10, 10] -> [9, 8, 7]
+
     """
 
     # Creates something similar to [1, 2, 3] if amount == 1
@@ -168,9 +195,14 @@ def bounds(list_: list[int | float]) -> list[int | float]:
     return [min(max(i, 0), 255) for i in list_]
 
 
-def smooth(y: FloatArray, box_pts: int) -> FloatArray:
+def smooth(y: FloatArray, box_pts: int, amt: float = 1.0) -> FloatArray:
     """Smooth a numpy array with a box filter"""
 
-    box = np.ones(box_pts) / box_pts
-    y_smooth = np.convolve(y, box, mode="same")
-    return y_smooth
+    box = np.full(box_pts, amt) / box_pts
+    return np.convolve(y, box, mode="same")
+
+
+# def smooth_h(y: FloatArray, box_pts: int, amt: float = 1.0) -> FloatArray:
+#     res: FloatArray = np.ndarray(y.shape)
+
+#     for i in range(y.size):

@@ -1,8 +1,8 @@
-#include "FastLED.h"
+#include <FastLED.h>
 
 #define LED_COUNT 120
 #define LED_DT 2 /* data pin */
-
+#define BRIGHTNESS_SCALE 255 /* 0 - 255 */
 #define MAX_BUFFER_SIZE 481   /* bytes */
 #define BLINK_PERIOD 1000     /* ms */
 #define BLINK_TIMEOUT 2000    /* ms */
@@ -11,6 +11,10 @@
 #define BAUD_RATE 115200      /* bps */
 #define HUE_CHANGE_RATE 1     /* degree per loop*/
 #define HUE_CHANGE_PERIOD 100 /* ms */
+
+#define MSG_START '['
+#define MSG_END ']'
+#define MSG_SEP ','
 
 struct CRGB leds[LED_COUNT];
 

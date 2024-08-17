@@ -6,9 +6,13 @@
 #define MAX_BRIGHTNESS 30    /* 0 - 255 */
 #define BLINK_PERIOD 1000    /* (ms) For blink when not connected */
 #define BLINK_TIMEOUT 2000   /* (ms) Wait time before blink */
-#define MAX_BUFFER_SIZE 481  /* (bytes) Serial buffer size; default is 481*/
+#define MAX_BUFFER_SIZE 361  /* (bytes) Serial buffer size; default is 361*/
                              /* (LED_COUNT*3 + LED_COUNT-1 + 2)    */
 #define BAUD_RATE 115200     /* bps */
+
+#define MSG_START '['
+#define MSG_END ']'
+#define MSG_SEP ','
 
 struct CRGB leds[LED_COUNT];
 
@@ -38,23 +42,24 @@ unsigned long blinkTimer = 0;
 void loop() {
   if (Serial.available()) {
     char first = Serial.read();
-    if (first == '{') {
+    if (first == MSG_START) {
       lastSignal = millis();
 
       char data[MAX_BUFFER_SIZE];
-      int amount = Serial.readBytesUntil('}', data, MAX_BUFFER_SIZE);
+      int amount = Serial.readBytesUntil(MSG_END, data, MAX_BUFFER_SIZE);
       data[amount] = NULL;
 
       char *offset = data;
       int i = 0;
 
       do {
-        uint8_t brt = atoi(offset);
+        // uint8_t brt = atoi(offset);
+        uint8_t brt = strtoul(offset, NULL, 16);
         brt = constrain(brt, 0, MAX_BRIGHTNESS);
 
         leds[i++].setRGB(brt, map(brt, 0, 255, 0, 50), brt);  // Pink :3
 
-        offset = strchr(offset, '|');
+        offset = strchr(offset, MSG_SEP);
       } while (offset++);
 
       FastLED.show();

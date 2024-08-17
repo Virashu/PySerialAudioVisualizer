@@ -7,21 +7,23 @@ import serial.tools.list_ports
 class Serial:
     @staticmethod
     def select() -> str:
-        """
-        Select serial port by console and return its name
+        """Select serial port by console and return its name
 
-        Example: 'COM1', '/dev/ttyUSB0'
+        Examples:
+            'COM1', '/dev/ttyUSB0'
+
         """
 
         avail_ports = serial.tools.list_ports.comports()
 
         if len(avail_ports) == 0:
-            raise RuntimeError("No serial ports found")
+            msg = "No serial ports found"
+            raise RuntimeError(msg)
 
-        print("Select port:")
+        print("Select port:")  # noqa: T201 (for user interaction)
 
         for i, p in enumerate(avail_ports):
-            print(f"[{i}] {p}")
+            print(f"[{i}] {p}")  # noqa: T201 (for user interaction)
 
         port_index = int(input())
         return avail_ports[port_index].name
@@ -32,12 +34,13 @@ class Serial:
         avail_ports = serial.tools.list_ports.comports()
 
         if len(avail_ports) == 0:
-            raise RuntimeError("No serial ports found")
+            msg = "No serial ports found"
+            raise RuntimeError(msg)
 
         for i, p in enumerate(avail_ports):
-            print(f"[{i}] {p}")
+            print(f"[{i}] {p}")  # noqa: T201 (for user interaction)
 
-    def __init__(self, port: str):
+    def __init__(self, port: str) -> None:
         self._port = serial.Serial(port=port, baudrate=115200)
 
     def send(self, data: str) -> None:

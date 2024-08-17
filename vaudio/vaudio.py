@@ -1,6 +1,6 @@
-"""
-Output audio visualizer
-"""
+"""Output audio visualizer"""
+
+from __future__ import annotations
 
 __all__ = ["AudioVisualizer"]
 
@@ -16,7 +16,7 @@ import numpy as np
 import saaba
 from serial import SerialException
 
-from .analyzer import Analyzer, AnalyzerFFT, AnalyzerRolling
+from .analyzer import Analyzer, AnalyzerFFT, AnalyzerRolling, AnalyzerRollingEase
 from .av_audio import Audio
 from .av_serial import Serial
 
@@ -28,24 +28,31 @@ logger = logging.getLogger(__name__)
 
 class Args(argparse.Namespace):
     list: bool
-    mode: Literal["fft", "rolling"]
+    mode: Literal["fft", "rolling", "rollingease"]
     port: str
     no_serial: bool
     device: str | None
 
 
+def to_hex(n: int) -> str:
+    return hex(n).removeprefix("0x").title()
+
+
 def _stringify_serial(data: Iterable[int | float]) -> str:
-    """
-    Convert list to string.
+    """Convert list to string.
+
     Prepare data for sending over serial
     """
+    str_arr: Iterable[str]
 
     if isinstance(data, np.ndarray):
-        return "{" + "|".join(data.astype(int).astype(str)) + "}"
+        v = np.vectorize(to_hex)
+        str_arr = v(data.astype(int))
+    else:
+        # For non-numpy floats
+        str_arr = ("0" if isnan(a) else str(to_hex(floor(a))) for a in data)
 
-    # For non-numpy floats
-    res = "{" + "|".join(("0" if isnan(a) else str(floor(a)) for a in data)) + "}"
-    return res
+    return f"[{",".join(str_arr)}]"
 
 
 class VAudioService:
@@ -70,7 +77,7 @@ class VAudioHttpServer(VAudioService):
             res.send({"data": self.analyzer.get_data_mirrored().astype(int).tolist()})
 
     def run(self) -> None:
-        self._server.listen("0.0.0.0", 7777)
+        self._server.listen("0.0.0.0", 7777)  # noqa: S104
 
     def stop(self) -> None:
         self._server.stop()
@@ -96,7 +103,7 @@ class VAudioSerial(VAudioService):
                 port = Serial(self.port_name)
             except SerialException:
                 logger.warning(
-                    "Serial port %s not found. Retry after 1 second" % self.port_name
+                    "Serial port %s not found. Retry after 1 second", self.port_name
                 )
                 sleep(1)
 
@@ -149,7 +156,8 @@ class AudioVisualizer:
         if index is not None:
             audio.device_index = index
         else:
-            raise RuntimeError("No audio input device found")
+            msg = "No audio input device found"
+            raise RuntimeError(msg)
 
         audio.setup()
 
@@ -160,6 +168,8 @@ class AudioVisualizer:
                 analyzer = AnalyzerFFT(audio)
             case "rolling":
                 analyzer = AnalyzerRolling(audio)
+            case "rollingease":
+                analyzer = AnalyzerRollingEase(audio)
 
         if not self._args.no_serial:
             self.services.append(VAudioSerial(analyzer, self._args.port))
@@ -208,7 +218,7 @@ class AudioVisualizer:
         parser.add_argument(
             "-m",
             "--mode",
-            choices=["fft", "rolling"],
+            choices=["fft", "rolling", "rollingease"],
             default="rolling",
             help="Visualization mode",
         )

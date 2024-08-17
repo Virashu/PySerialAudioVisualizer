@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from vaudio.av_audio import Audio
 
 __a = Audio()
-i = __a.select_by_name("Stereo Mix")
+i = Audio.select_by_name("Stereo Mix")
 __a.device_index = i
 __a.setup()
 
