@@ -93,7 +93,9 @@ class Audio:
         data_int = struct.unpack(f"{self._chunk}h", data)
 
         # Calculate FFT
-        self._fft = np.abs(np.fft.fft(data_int)) * 2 / (11000 * self._chunk)
+        fft = np.abs(np.fft.fft(data_int))
+
+        self._fft = fft * 2 / (11000 * self._chunk)
 
     def loop(self) -> None:
         while True:

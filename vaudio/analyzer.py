@@ -35,10 +35,16 @@ class Analyzer:
             self.audio = Audio()
             self.audio.setup()
 
-        self.size = size
+        self.size: int = size
+        self.levels: FloatArray = np.ndarray(100, float)
+        self.level: float = 1
 
     def update(self) -> None:
         self.audio.update()
+
+        max_: float = max(float(np.max(self.get_data())), 1.0)
+        self.levels = np.concatenate(([max_], self.levels[:-1]))
+        self.level = float(np.mean(self.levels))
 
     @abstractmethod
     def get_data(self) -> FloatArray:
@@ -58,6 +64,7 @@ class AnalyzerRolling(Analyzer):
     def __init__(self, size: int, audio: None | Audio = None) -> None:
         super().__init__(size, audio)
         self.values: FloatArray = np.ndarray((self.size,), float)
+        self.fade_k = 1 / (3 * 10e4) * self.size
 
     def update(self) -> None:
         super().update()
@@ -65,12 +72,17 @@ class AnalyzerRolling(Analyzer):
         avg = int(np.mean(self.audio.get_values_np(self.size)))
         avg = min(max(avg * 0.8, 0), 255 - 50)
 
-        self.values = np.concatenate(([avg], self.values[0:-1]))
+        baseline: float = float(np.mean(self.values))
+        if baseline == 0:
+            baseline = 10.0
+
+        self.values = np.concatenate(([avg / baseline], self.values[0:-1]))
         self.values = fade_np(self.values, 0.002)
         self.values = smooth(self.values, 2)
 
     def get_data(self) -> FloatArray:
-        values_adj = self.values**2
+        values_adj = self.values
+        values_adj = values_adj / self.level * 10
         return np.clip(values_adj, 0, 255)
 
     def get_data_mirrored(self) -> FloatArray:
@@ -97,7 +109,7 @@ class AnalyzerFFT(Analyzer):
         self.fft = np.array(sm)
 
     def get_data(self) -> FloatArray:
-        return self.fft
+        return self.fft / self.level * 10
 
     def get_data_mirrored(self) -> FloatArray:
         return np.concatenate((np.flip(self.fft), self.fft))

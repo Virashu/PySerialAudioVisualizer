@@ -20,18 +20,11 @@ build-backend = "poetry.core.masonry.api"
 [tool.pylint]
 disable = "missing-module-docstring,missing-class-docstring,missing-function-docstring"
 
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-  "PLR",
-  "PLC",
   "ANN101",
   "ANN102",
-  "ERA001",
-  "INP001",
   "COM812",
   "D100",
   "D101",
@@ -43,8 +36,12 @@ ignore = [
   "D107",
   "D202",
   "D400",
-  "D415",
   "D401",
-  "ANN101",
+  "D415",
+  "ERA001",
+  "INP001",
+  "PLC",
+  "PLR",
   "TRY003",
 ]
+pydocstyle.convention = "google"

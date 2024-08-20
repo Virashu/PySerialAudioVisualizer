@@ -34,4 +34,4 @@ const update = () => {
     .then((res) => (res ? render(res.data) : ""));
 }
 
-setInterval(update, 10);
+setInterval(update, 5);

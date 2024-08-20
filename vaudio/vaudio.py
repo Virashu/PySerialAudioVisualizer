@@ -10,7 +10,7 @@ import sys
 from math import floor, isnan
 from threading import Thread
 from time import sleep, time
-from typing import Iterable, Literal
+from typing import Any, Iterable, Literal
 
 import numpy as np
 import saaba
@@ -41,8 +41,10 @@ class Args(argparse.Namespace):
     size: int
 
 
-def to_hex(n: int) -> str:
-    return hex(n).removeprefix("0x").title()
+def to_hex(n: float) -> str:
+    if isinstance(n, (np.str_, str)) or isnan(n):
+        return "0"
+    return hex(round(n)).removeprefix("0x").title()
 
 
 def _stringify_serial(data: Iterable[int | float]) -> str:
@@ -54,7 +56,7 @@ def _stringify_serial(data: Iterable[int | float]) -> str:
 
     if isinstance(data, np.ndarray):
         v = np.vectorize(to_hex)
-        str_arr = v(data.astype(int))
+        str_arr = v(data)
     else:
         # For non-numpy floats
         str_arr = ("0" if isnan(a) else str(to_hex(floor(a))) for a in data)
@@ -195,7 +197,7 @@ class AudioVisualizer:
             logger.info("Service started: %s", s.__class__.__name__)
             self.threads.append(_t)
 
-        while self._running:
+        while self._running and all(t.is_alive() for t in self.threads):
             # To stay responsible to things like KeyboardInterrupt
             # sleep(0.1)
             analyzer.update()
@@ -239,7 +241,7 @@ class AudioVisualizer:
             "-d", "--device", default=None, help="Select audio input device by name"
         )
 
-        parser.add_argument("-s", "--size", default=120, type=int)
+        parser.add_argument("-s", "--size", default=60, type=int)
 
         parser.parse_args(namespace=self._args)
 
