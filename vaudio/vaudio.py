@@ -10,7 +10,7 @@ import sys
 from math import floor, isnan
 from threading import Thread
 from time import sleep, time
-from typing import Any, Iterable, Literal
+from typing import Iterable, Literal
 
 import numpy as np
 import saaba

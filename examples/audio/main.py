@@ -1,30 +1,46 @@
+# type: ignore[reportUnknownMemberType]
+
+from typing import NoReturn
+
 from matplotlib import pyplot as plt
 
 from vaudio.av_audio import Audio
 
-__a = Audio()
-i = Audio.select_by_name("Stereo Mix")
-__a.device_index = i
-__a.setup()
 
-plt.show(block=False)
-
-try:
+def loop(audio: Audio) -> NoReturn:
     while True:
         plt.xlim(0, 100)
         plt.ylim(-100, 100)
 
         plt.xticks(range(0, 100, 10))
         plt.yticks(range(-100, 100, 100))
-        # vals = __a.get_values_np(1024)
-        # plt.plot(range(len(vals)), vals)
 
-        __a.update()
-        vals = __a.get_values_np(60)
+        audio.update()
+        vals = audio.get_values_np(60)
 
         plt.plot(range(len(vals)), vals)
 
         plt.pause(0.01)
         plt.clf()
-except KeyboardInterrupt:
-    pass
+
+
+def main(device_name: str) -> None:
+    audio = Audio()
+    i = Audio.select_by_name(device_name)
+
+    if not i:
+        msg = "Device not found"
+        raise ValueError(msg)
+
+    audio.device_index = i
+    audio.setup()
+
+    try:
+        plt.show(block=False)
+        loop(audio)
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main("Stereo Mix")
