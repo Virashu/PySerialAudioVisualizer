@@ -31,6 +31,6 @@ python -m vaudio <args>
 
 Visualizer supports two modes: `fft` and `rolling`
 
-## Notes
+## Arduino firmware
 
-Arduino C++ code formatting style -- `Google`
+[virashu/viravis_arduino](https://github.com/virashu/viravis_arduino)

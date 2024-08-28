@@ -36,7 +36,7 @@ class Analyzer:
             self.audio.setup()
 
         self.size: int = size
-        self.levels: FloatArray = np.ndarray(100, float)
+        self.levels: FloatArray = np.full(100, 0.0, float)
         self.level: float = 1
 
     def update(self) -> None:

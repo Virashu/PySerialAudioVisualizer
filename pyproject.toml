@@ -12,7 +12,6 @@ pyserial = "^3.5"
 saaba = { git = "https://github.com/virashu/saaba" }
 numpy = "^1.26.4"
 
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

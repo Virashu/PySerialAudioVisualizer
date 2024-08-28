@@ -64,6 +64,21 @@ def _stringify_serial(data: Iterable[int | float]) -> str:
     return f"[{",".join(str_arr)}]"
 
 
+def _stringify_http(data: Iterable[int | float]) -> list[int | float]:
+    """Convert list to string.
+
+    Prepare data for sending over serial
+    """
+    res: list[int | float] = []
+
+    for x in data:
+        if isinstance(x, (str, np.str_)) or isnan(x):
+            x = 0
+        res.append(x)
+
+    return res
+
+
 class VAudioService:
     def __init__(self, analyzer: Analyzer) -> None:
         self.analyzer = analyzer
@@ -83,7 +98,7 @@ class VAudioHttpServer(VAudioService):
 
         @self._server.get("/")
         def _(_: saaba.Request, res: saaba.Response) -> None:
-            res.send({"data": self.analyzer.get_data_mirrored().astype(int).tolist()})
+            res.send({"data": _stringify_http(self.analyzer.get_data_mirrored())})
 
     def run(self) -> None:
         self._server.listen("0.0.0.0", 7777)  # noqa: S104
