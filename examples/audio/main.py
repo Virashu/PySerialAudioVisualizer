@@ -4,7 +4,7 @@ from typing import NoReturn
 
 from matplotlib import pyplot as plt
 
-from vaudio.av_audio import Audio
+from viravis.av_audio import Audio
 
 
 def loop(audio: Audio) -> NoReturn:

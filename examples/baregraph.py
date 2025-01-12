@@ -2,7 +2,7 @@ import json
 from time import sleep
 from urllib import request
 
-import vaudio.graph as graph
+import viravis.graph as graph
 
 
 def get(url: str) -> str:

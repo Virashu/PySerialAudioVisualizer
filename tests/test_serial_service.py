@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from vaudio.vaudio import _stringify_serial  # type: ignore[reportPrivateUsage]
+from viravis.vaudio import _stringify_serial  # type: ignore[reportPrivateUsage]
 
 
 class Test(unittest.TestCase):

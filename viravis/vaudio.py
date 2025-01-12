@@ -181,12 +181,11 @@ class AudioVisualizer:
 
         index = Audio.select_by_name(device_name)
 
-        if index is not None:
-            audio.device_index = index
-        else:
+        if index is None:
             msg = "No audio input device found"
             raise RuntimeError(msg)
 
+        audio.device_index = index
         audio.setup()
 
         analyzer: Analyzer
