@@ -43,4 +43,7 @@ def main(device_name: str) -> None:
 
 
 if __name__ == "__main__":
-    main("Stereo Mix")
+    name = Audio.select()
+
+    if name:
+        main(name)

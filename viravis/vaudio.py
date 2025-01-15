@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import subprocess
+
 __all__ = ["AudioVisualizer"]
 
 import argparse
 import logging
+import os
 import sys
 from math import floor, isnan
 from threading import Thread
@@ -61,7 +64,7 @@ def _stringify_serial(data: Iterable[int | float]) -> str:
         # For non-numpy floats
         str_arr = ("0" if isnan(a) else str(to_hex(floor(a))) for a in data)
 
-    return f"[{",".join(str_arr)}]"
+    return f"[{','.join(str_arr)}]"
 
 
 def _stringify_http(data: Iterable[int | float]) -> list[int | float]:
@@ -73,10 +76,16 @@ def _stringify_http(data: Iterable[int | float]) -> list[int | float]:
 
     for x in data:
         if isinstance(x, (str, np.str_)) or isnan(x):
-            x = 0
+            x = 0  # noqa: PLW2901
         res.append(x)
 
     return res
+
+
+def get_default_device_pulseaudio() -> str:
+    command = 'pacmd list-sinks | grep -Pzo "\\* index(.*\\n)*" | sed \\$d | grep -e "device.description" | cut -f2 -d\\"'  # noqa: E501
+    out = subprocess.check_output(["/bin/sh", "-c", command])  # noqa: S603
+    return out.decode().rstrip()
 
 
 class VAudioService:
@@ -174,10 +183,14 @@ class AudioVisualizer:
             match sys.platform:
                 case "win32":
                     device_name = "Stereo Mix"
+                # case "linux":
+                #     device_name = f"Monitor of {get_default_device_pulseaudio()}"
                 case _:
                     device_name = "default"
 
-        logger.info("Chosen device: %s", device_name)
+        logger.info("Chosen device: `%s`", device_name)
+
+        # device_name = Audio.select()
 
         index = Audio.select_by_name(device_name)
 
